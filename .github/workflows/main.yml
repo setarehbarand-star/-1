@@ -1,0 +1,46 @@
+name: Build Cordova CloudCity
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # --- 1️⃣ دریافت فایل‌ها از ریپو
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # --- 2️⃣ نصب Node.js برای Cordova
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # --- 3️⃣ نصب Cordova جهانی
+      - name: Install Cordova CLI
+        run: |
+          npm install -g cordova
+
+      # --- 4️⃣ خروج فایل از حالت ZIP
+      - name: Extract game zip
+        run: |
+          unzip "بازی شهر ابری اعداد.zip" -d ./cloudcity
+          ls ./cloudcity
+
+      # --- 5️⃣ بیلد پروژه اندروید Cordova
+      - name: Build Cordova Android
+        run: |
+          cd cloudcity
+          cordova platform add android
+          cordova build android
+
+      # --- 6️⃣ ذخیره خروجی APK یا فایل‌ها
+      - name: Archive Build Output
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudcity-apk
+          path: cloudcity/platforms/android/app/build/outputs/apk/debug/*.apk
