@@ -1,0 +1,72 @@
+.github/workflows/build_cordova_zip.yml
+name: Build CloudCity Cordova Full ZIP
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-cordova:
+    runs-on: ubuntu-latest
+
+    steps:
+      # --- 1️⃣ دریافت محتوا از ریپو
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # --- 2️⃣ نصب Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # --- 3️⃣ نصب Cordova CLI
+      - name: Install Cordova
+        run: npm install -g cordova
+
+      # --- 4️⃣ خروج فایل از حالت فشرده
+      - name: Extract CloudCity Game ZIP
+        run: |
+          unzip "بازی شهر ابری اعداد.zip" -d ./game_src
+          ls ./game_src
+
+      # --- 5️⃣ ساخت پروژه Cordova و افزودن پلتفرم اندروید
+      - name: Create Cordova Project
+        run: |
+          cordova create cloudcity com.cloudcity.math "CloudCity Numbers"
+          cd cloudcity
+          rm -rf www/*
+          cp -r ../game_src/* www/
+          cordova platform add android
+
+      # --- 6️⃣ ویرایش config.xml و مجوزها برای استفاده در Android Studio
+      - name: Fix Cordova Config
+        run: |
+          cd cloudcity
+          sed -i 's|<widget|<widget xmlns:android="http://schemas.android.com/apk/res/android" android:usesCleartextTraffic="true"|' config.xml
+          sed -i 's|</widget>|<allow-intent href="market:*"/>\
+<allow-intent href="geo:*"/>\
+<access origin="*"/>\
+</widget>|' config.xml
+
+      # --- 7️⃣ بیلد پروژه Cordova اندروید
+      - name: Build Cordova Android (Gradle)
+        run: |
+          cd cloudcity
+          cordova build android
+
+      # --- 8️⃣ ایجاد ZIP نهایی قابل ورود به Android Studio
+      - name: Package Cordova Project as ZIP
+        run: |
+          cd cloudcity
+          zip -r ../شهر_ابری_اعداد_Cordova_Full.zip .
+          cd ..
+          ls -lh شهر_ابری_اعداد_Cordova_Full.zip
+
+      # --- 9️⃣ آپلود فایل ZIP به عنوان Artifact برای دانلود
+      - name: Upload Final Cordova ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: شهر_ابری_اعداد_Cordova_Full
+          path: شهر_ابری_اعداد_Cordova_Full.zip
